@@ -56,10 +56,10 @@ show_info() {
     echo "固件系统："$(sed -n  "/^NAME=\"/p" /etc/os-release | sed -e "s/NAME=\"//g" -e "s/\"//g" )
     echo "固件版本："$(sed -n  "/^DISTRIB_RELEASE=\'/p" /etc/openwrt_release|sed -e "s/DISTRIB_RELEASE='//g" -e "s/'//g" )
     echo "固件架构："$(sed -n  "/^DISTRIB_ARCH=\'/p" /etc/openwrt_release|sed -e "s/DISTRIB_ARCH='//g" -e "s/'//g" )
-    if  [ -e "/etc/openwrt-k_info" ]; then
-        echo "固件编译者："$(sed -n  "/^COMPILER=\"/p" /etc/openwrt-k_info | sed -e "s/COMPILER=\"//g" -e "s/\"//g" )
-        echo "固件编译仓库地址："$(sed -n  "/REPOSITORY_URL=\"/p" /etc/openwrt-k_info | sed -e "s/REPOSITORY_URL=\"//g" -e "s/\"//g" )
-        echo "固件编译时间：UTC+8 "$(sed -n  "/^COMPILE_START_TIME=\"/p" /etc/openwrt-k_info | sed -e "s/COMPILE_START_TIME=\"//g" -e "s/\"/时/g" -e "s/-/日/" -e "s/\./月/g" -e "s/月/年/" )
+    if  [ -e "/etc/openwrt_info" ]; then
+        echo "固件编译者："$(sed -n  "/^COMPILER=\"/p" /etc/openwrt_info | sed -e "s/COMPILER=\"//g" -e "s/\"//g" )
+        echo "固件编译仓库地址："$(sed -n  "/REPOSITORY_URL=\"/p" /etc/openwrt_info | sed -e "s/REPOSITORY_URL=\"//g" -e "s/\"//g" )
+        echo "固件编译时间：UTC+8 "$(sed -n  "/^COMPILE_START_TIME=\"/p" /etc/openwrt_info | sed -e "s/COMPILE_START_TIME=\"//g" -e "s/\"/时/g" -e "s/-/日/" -e "s/\./月/g" -e "s/月/年/" )
     elif [ "$(grep -c "Compiled by" /etc/openwrt_release)" -ne '0' ];then
         echo "固件编译者："$(sed -n  "/Compiled by /p" /etc/openwrt_release|sed -e "s/.*Compiled by //g" -e "s/'//g" )
     fi
@@ -190,19 +190,19 @@ update_package() {
     cd $TMPDIR/update/package
     [[ -d $TMPDIR ]] && rm -rf $TMPDIR/update/package/* || exit 1
     opkg list-installed > installed.list
-    if  [ ! -e "/etc/openwrt-k_info" ]; then
-        echo "错误：未找到openwrt-k_info"
+    if  [ ! -e "/etc/openwrt_info" ]; then
+        echo "错误：未找到openwrt_info"
         exit 1
-    elif [ "$(grep -c "^REPOSITORY_URL=" /etc/openwrt-k_info)" -eq '0' ]; then
+    elif [ "$(grep -c "^REPOSITORY_URL=" /etc/openwrt_info)" -eq '0' ]; then
         echo "错误：未知的固件编译仓库地址"
         exit 1
-    elif [ "$(grep -c "^TAG_SUFFIX=" /etc/openwrt-k_info)" -eq '0' ]; then
+    elif [ "$(grep -c "^TAG_SUFFIX=" /etc/openwrt_info)" -eq '0' ]; then
         echo "错误：未知的固件标签前缀"
         exit 1
     fi
-    REPOSITORY_URL=$(sed -n  "/REPOSITORY_URL=\"/p" /etc/openwrt-k_info | sed -e "s/REPOSITORY_URL=\"//g" -e "s/\"//g")
+    REPOSITORY_URL=$(sed -n  "/REPOSITORY_URL=\"/p" /etc/openwrt_info | sed -e "s/REPOSITORY_URL=\"//g" -e "s/\"//g")
     REPOSITORY=$(echo $REPOSITORY_URL|sed -e "s/https:\/\/github.com\///")
-    TAG_SUFFIX=$(sed -n  "/TAG_SUFFIX=\"/p" /etc/openwrt-k_info | sed -e "s/TAG_SUFFIX=\"//g" -e "s/\"//g")
+    TAG_SUFFIX=$(sed -n  "/TAG_SUFFIX=\"/p" /etc/openwrt_info | sed -e "s/TAG_SUFFIX=\"//g" -e "s/\"//g")
     latest_ver="$(curl -s https://api.github.com/repos/$REPOSITORY/releases 2>/dev/null | grep -E 'tag_name' | grep "$TAG_SUFFIX" | sed -e 's/    "tag_name": "//' -e 's/",//' | sed -n '1p')"
     FILE_NAME=$(curl -s "https://api.github.com/repos/$REPOSITORY/releases/tags/$latest_ver"| grep -E 'name'| grep -E '\.manifest'| sed -e 's/      "name": "//' -e 's/",//' | sed -n '1p')
     curl -L --retry 3 --connect-timeout 20 $REPOSITORY_URL/releases/download/${latest_ver}/$FILE_NAME -o package.list || download_failed
